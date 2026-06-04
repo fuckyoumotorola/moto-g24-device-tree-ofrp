@@ -1,4 +1,3 @@
-```yaml
 name: OrangeFox - Build
 
 on:
@@ -321,4 +320,3 @@ jobs:
             Device: [Device Tree/Branch](${{ env.DEVICE_TREE_URL }}/tree/${{ github.event.inputs.DEVICE_TREE_BRANCH }})
             Commit: Most recent [commit](${{ env.DEVICE_TREE_URL }}/commit/${{ env.COMMIT_ID }}) during building.
             MD5 (img): ${{ env.MD5_IMG }}
-```
