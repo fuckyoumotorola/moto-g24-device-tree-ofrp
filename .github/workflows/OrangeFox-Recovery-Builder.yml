@@ -115,12 +115,14 @@ jobs:
         if_false: lunch omni_${{ github.event.inputs.DEVICE_NAME }}-eng && make clean && mka ${{ github.event.inputs.BUILD_TARGET }}image
     - name: Building OrangeFox
       run: |
-        cd ${GITHUB_WORKSPACE}/OrangeFox/fox_${{ github.event.inputs.MANIFEST_BRANCH }}
-        set +e
-        source build/envsetup.sh
-        export ALLOW_MISSING_DEPENDENCIES=true
-        set -e
-        sed -i 's/OF_TARGET_DEVICES/FOX_TARGET_DEVICES/g' bootable/recovery/orangefox.mk && lunch orangefox_${{ github.event.inputs.DEVICE_NAME }}-eng && make clean && mka -j4 adbd ${{ github.event.inputs.BUILD_TARGET }}image
+       cd ${GITHUB_WORKSPACE}/OrangeFox/fox_${{ github.event.inputs.MANIFEST_BRANCH }}
+       set +e
+       source build/envsetup.sh
+       export ALLOW_MISSING_DEPENDENCIES=true
+       set -e
+       lunch orangefox_${{ github.event.inputs.DEVICE_NAME }}-eng
+       make clean
+       mka -j4 adbd ${{ github.event.inputs.BUILD_TARGET }}image
     - name: Set Build Date # Output will be use in Release
       run: |
         echo "BUILD_DATE=$(date +%Y%m%d)" >> $GITHUB_ENV
@@ -129,7 +131,6 @@ jobs:
           DEVICE_TREE_URL="${DEVICE_TREE_URL%.git}"
         fi
         echo "DEVICE_TREE_URL=${DEVICE_TREE_URL}" >> $GITHUB_ENV
-
     - name: Check if Recovery Exist
       run: |
         cd ${GITHUB_WORKSPACE}/OrangeFox/fox_${{ github.event.inputs.MANIFEST_BRANCH }}
