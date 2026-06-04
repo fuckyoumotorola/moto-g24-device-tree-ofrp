@@ -15,7 +15,7 @@
 #
 
 PRODUCT_MAKEFILES += \
-    $(LOCAL_DIR)/ofrp_fogorow.mk
+    $(LOCAL_DIR)/orangefox_fogorow.mk
 
 COMMON_LUNCH_CHOICES += \
-    ofrp_fogorow-eng
+    orangefox_fogorow-eng
