@@ -55,12 +55,20 @@ on:
 jobs:
   build:
     name: Build OFRP by ${{ github.actor }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04-8core
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     permissions:
       contents: write
     steps:
+    - name: Check runner specs
+      run: |
+        echo "Runner name: $RUNNER_NAME"
+        echo "Runner OS: $RUNNER_OS"
+        nproc
+        free -h
+        df -h
+
     - name: Checkout
       uses: actions/checkout@v3
 
