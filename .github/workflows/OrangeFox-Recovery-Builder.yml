@@ -55,7 +55,7 @@ on:
 jobs:
   build:
     name: Build OFRP by ${{ github.actor }}
-    runs-on: ubuntu-24.04-8core
+    runs-on: ubuntu-22.04
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     permissions:
@@ -70,7 +70,7 @@ jobs:
         df -h
 
     - name: Checkout
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
 
     - name: Display Inputs
       run: |
@@ -91,7 +91,6 @@ jobs:
     - name: Build Environment
       run: |
         sudo apt update
-        sudo apt -y upgrade
         git clone https://gitlab.com/OrangeFox/misc/scripts
         cd scripts
         sudo bash setup/android_build_env.sh
@@ -114,13 +113,6 @@ jobs:
         cd ${{ github.event.inputs.DEVICE_PATH }}
         echo "COMMIT_ID=$(git rev-parse HEAD)" >> $GITHUB_ENV
 
-    - name: Check Manifest Branch
-      uses: haya14busa/action-cond@v1
-      id: fox_branch
-      with:
-        cond: ${{ github.event.inputs.MANIFEST_BRANCH == '11.0' || github.event.inputs.MANIFEST_BRANCH == '12.1' }}
-        if_true: lunch orangefox_${{ github.event.inputs.DEVICE_NAME }}-eng && make clean && mka adbd ${{ github.event.inputs.BUILD_TARGET }}image
-        if_false: lunch omni_${{ github.event.inputs.DEVICE_NAME }}-eng && make clean && mka ${{ github.event.inputs.BUILD_TARGET }}image
     - name: Building OrangeFox
       run: |
        cd ${GITHUB_WORKSPACE}/OrangeFox/fox_${{ github.event.inputs.MANIFEST_BRANCH }}
@@ -129,7 +121,6 @@ jobs:
        export ALLOW_MISSING_DEPENDENCIES=true
        set -e
        lunch orangefox_${{ github.event.inputs.DEVICE_NAME }}-eng
-       make clean
        mka -j4 adbd ${{ github.event.inputs.BUILD_TARGET }}image
     - name: Set Build Date # Output will be use in Release
       run: |
