@@ -42,4 +42,4 @@ export FOX_USE_BUSYBOX_BINARY=1
 
 # Maintainer/version
 export OF_MAINTAINER="Tiziano Tomas Luzi Ramos"
-export FOX_MAINTAINER_PATCH_VERSION="R12.1-Unofficial-fogorow"
+export FOX_MAINTAINER_PATCH_VERSION=1
