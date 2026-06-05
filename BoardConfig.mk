@@ -142,7 +142,7 @@ TARGET_BOARD_PLATFORM := mt6768
 
 # TWRP Configurations
 TW_FRAMERATE := 90
-TW_THEME := portrait_mdpi
+TW_THEME := portrait_hdpi
 TARGET_USES_LOGD := true
 TWRP_INCLUDE_LOGCAT := true
 TW_INCLUDE_RESETPROP := true
