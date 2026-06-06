@@ -33,4 +33,6 @@ PRODUCT_PACKAGES += \
     vold \
     vdc \
     keystore2 \
-    android.system.keystore2-service
+    android.system.keystore2-service \
+    android.hardware.vibrator@1.3-service-mtk \
+    android.hardware.vibrator@1.3-mtkimpl
