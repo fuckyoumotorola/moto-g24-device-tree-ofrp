@@ -68,3 +68,8 @@ PRODUCT_PACKAGES += \
     update_engine \
     update_engine_sideload \
     update_verifier
+
+# Vibrator HAL
+PRODUCT_PACKAGES += \
+    android.hardware.vibrator@1.3-service-mtk \
+    android.hardware.vibrator@1.3-mtkimpl
