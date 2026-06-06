@@ -29,3 +29,8 @@ PRODUCT_NAME := orangefox_fogorow
 PRODUCT_BRAND := motorola
 PRODUCT_MODEL := fogorow
 PRODUCT_MANUFACTURER := motorola
+PRODUCT_PACKAGES += \
+    vold \
+    vdc \
+    keystore2 \
+    android.system.keystore2-service
