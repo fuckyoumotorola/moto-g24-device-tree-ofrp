@@ -64,10 +64,6 @@ PRODUCT_COPY_FILES += \
     $(LOCAL_PATH)/prebuilts/vendor/lib64/hw/vibrator.mt6768.so:$(TARGET_COPY_OUT_VENDOR)/lib64/hw/vibrator.mt6768.so \
     $(LOCAL_PATH)/prebuilts/vendor/lib64/hw/vibrator.default.so:$(TARGET_COPY_OUT_VENDOR)/lib64/hw/vibrator.default.so
 
-PRODUCT_COPY_FILES += \
-    $(LOCAL_PATH)/prebuilts/vendor/lib/hw/vibrator.mt6768.so:$(TARGET_COPY_OUT_VENDOR)/lib/hw/vibrator.mt6768.so \
-    $(LOCAL_PATH)/prebuilts/vendor/lib/hw/vibrator.default.so:$(TARGET_COPY_OUT_VENDOR)/lib/hw/vibrator.default.so
-
 # Keystore2
 PRODUCT_PACKAGES += \
     android.system.keystore2
