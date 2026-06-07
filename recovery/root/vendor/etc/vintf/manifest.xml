@@ -542,6 +542,7 @@
         <name>android.hardware.vibrator</name>
         <version>2</version>
         <fqname>IVibrator/default</fqname>
+        <fqname>IVibratorManager/default</fqname>
     </hal>
     <sepolicy>
         <version>31.0</version>
