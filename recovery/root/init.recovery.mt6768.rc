@@ -16,4 +16,6 @@ on post-fs
 
 on boot
     start health-hal-2-1
+
+on property:hwservicemanager.ready=true
     start vendor.vibrator-default
