@@ -2,5 +2,7 @@ service vendor.vibrator-default /vendor/bin/hw/android.hardware.vibrator-service
     class hal
     user system
     group system
+    seclabel u:r:recovery:s0
     interface aidl android.hardware.vibrator.IVibrator/default
     oneshot
+    disabled
