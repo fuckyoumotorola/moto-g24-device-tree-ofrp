@@ -538,15 +538,10 @@
         </interface>
         <fqname>@1.0::ITui/default</fqname>
     </hal>
-    <hal format="hidl">
+    <hal format="aidl">
         <name>android.hardware.vibrator</name>
-        <transport>hwbinder</transport>
-        <version>1.3</version>
-        <interface>
-            <name>IVibrator</name>
-            <instance>default</instance>
-        </interface>
-        <fqname>@1.3::IVibrator/default</fqname>
+        <version>2</version>
+        <fqname>IVibrator/default</fqname>
     </hal>
     <sepolicy>
         <version>31.0</version>
