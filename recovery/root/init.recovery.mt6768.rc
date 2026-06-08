@@ -2,6 +2,7 @@ import /init.decrypt.rc
 
 on early-init
     setprop sys.usb.config mtp,adb
+    insmod /lib/modules/regulator-vibrator.ko
 
 on post-fs
     # Support A/B feature for EMMC and UFS boot region
