@@ -142,6 +142,7 @@ TARGET_BOARD_PLATFORM := mt6768
 TW_HAS_VIBRATOR := true
 TW_VIBRATOR_PATH := /sys/devices/platform/regulator_vibrator/leds/vibrator/brightness
 TW_VIBRATOR_TIMEOUT := 50
+TW_MAX_BRIGHTNESS := 1
 TW_FRAMERATE := 90
 TW_THEME := portrait_hdpi
 TARGET_USES_LOGD := true
@@ -165,8 +166,8 @@ TW_USE_KEYMASTERX := true
 
 # Brightness
 TW_BRIGHTNESS_PATH := "/sys/class/leds/lcd-backlight/brightness"
-TW_DEFAULT_BRIGHTNESS := 1400
-TW_MAX_BRIGHTNESS := 2048
+TW_DEFAULT_BRIGHTNESS := 140
+TW_MAX_BRIGHTNESS := 300
 
 # USB
 TW_EXCLUDE_DEFAULT_USB_INIT := true
