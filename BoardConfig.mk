@@ -141,8 +141,7 @@ TARGET_BOARD_PLATFORM := mt6768
 # TWRP Configurations
 TW_HAS_VIBRATOR := true
 TW_VIBRATOR_PATH := /sys/devices/platform/regulator_vibrator/leds/vibrator/brightness
-TW_VIBRATOR_TIMEOUT := 50
-TW_MAX_BRIGHTNESS := 1
+TW_VIBRATOR_TIMEOUT := 1
 TW_FRAMERATE := 90
 TW_THEME := portrait_hdpi
 TARGET_USES_LOGD := true
