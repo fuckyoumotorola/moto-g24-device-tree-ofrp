@@ -147,6 +147,67 @@ jobs:
         cd ${{ github.event.inputs.DEVICE_PATH }}
         echo "COMMIT_ID=$(git rev-parse HEAD)" >> $GITHUB_ENV
 
+    - name: Patch vibrator
+      run: |
+        cd "${GITHUB_WORKSPACE}/OrangeFox/fox_${{ github.event.inputs.MANIFEST_BRANCH }}"
+        python3 - <<'PY'
+        from pathlib import Path
+
+        p = Path("bootable/recovery/minuitwrp/events.cpp")
+        s = p.read_text()
+
+        s = s.replace(
+            '#define VIBRATOR_TIMEOUT_FILE\t"/sys/class/timed_output/vibrator/enable"',
+            '#define VIBRATOR_TIMEOUT_FILE "/sys/devices/platform/regulator_vibrator/leds/vibrator/brightness"'
+        )
+
+        old = '''int vibrate(int timeout_ms)
+        {
+            char str[20];
+            int fd;
+            int ret;
+
+            if (timeout_ms > 10000) timeout_ms = 1000;
+
+            fd = open(VIBRATOR_TIMEOUT_FILE, O_WRONLY);
+            if (fd < 0)
+                return -1;
+
+            ret = snprintf(str, sizeof(str), "%d", timeout_ms);
+            ret = write(fd, str, ret);
+            close(fd);
+
+            if (ret < 0)
+               return -1;
+
+            return 0;
+        }'''
+
+        new = '''int vibrate(int timeout_ms)
+        {
+            int fd = open(VIBRATOR_TIMEOUT_FILE, O_WRONLY);
+            if (fd < 0) return -1;
+
+            write(fd, "255", 3);
+            close(fd);
+
+            usleep(timeout_ms * 1000);
+
+            fd = open(VIBRATOR_TIMEOUT_FILE, O_WRONLY);
+            if (fd < 0) return -1;
+
+            write(fd, "0", 1);
+            close(fd);
+
+            return 0;
+        }'''
+
+        if old not in s:
+            raise SystemExit("No se encontró la función vibrate original")
+
+        p.write_text(s.replace(old, new))
+        PY
+
     - name: Building OrangeFox
       shell: bash
       run: |
