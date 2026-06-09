@@ -129,16 +129,44 @@ jobs:
         cd scripts
         sudo bash setup/android_build_env.sh
 
+    - name: Restore OrangeFox source cache
+      id: orangefox-source-cache
+      uses: actions/cache@v4
+      with:
+        path: |
+          ${{ github.workspace }}/OrangeFox/fox_${{ github.event.inputs.MANIFEST_BRANCH }}/.repo
+        key: orangefox-source-${{ runner.os }}-${{ github.event.inputs.MANIFEST_BRANCH }}-${{ github.run_id }}
+        restore-keys: |
+          orangefox-source-${{ runner.os }}-${{ github.event.inputs.MANIFEST_BRANCH }}-
+
     - name: Set-up Manifest
       if: github.event.inputs.MANIFEST_BRANCH == '11.0' || github.event.inputs.MANIFEST_BRANCH == '12.1' || github.event.inputs.MANIFEST_BRANCH == '14.1'
+      shell: bash
       run: |
-        mkdir -p ${GITHUB_WORKSPACE}/OrangeFox
-        cd ${GITHUB_WORKSPACE}/OrangeFox
+        set -e
+
+        ROOT_DIR="${GITHUB_WORKSPACE}/OrangeFox"
+        SOURCE_DIR="${ROOT_DIR}/fox_${{ github.event.inputs.MANIFEST_BRANCH }}"
+        SYNC_DIR="${ROOT_DIR}/sync"
+
+        mkdir -p "${ROOT_DIR}"
+        mkdir -p "${SOURCE_DIR}"
+
         git config --global user.name "Samuel Kendall"
         git config --global user.email "kinguser981@gmail.com"
-        git clone https://gitlab.com/OrangeFox/sync.git
-        cd sync
-        ./orangefox_sync.sh --branch ${{ github.event.inputs.MANIFEST_BRANCH }} --path ${GITHUB_WORKSPACE}/OrangeFox/fox_${{ github.event.inputs.MANIFEST_BRANCH }}
+
+        if [ ! -d "${SYNC_DIR}/.git" ]; then
+          git clone https://gitlab.com/OrangeFox/sync.git "${SYNC_DIR}"
+        else
+          git -C "${SYNC_DIR}" fetch --depth=1 origin
+          git -C "${SYNC_DIR}" reset --hard origin/HEAD
+        fi
+
+        cd "${SYNC_DIR}"
+
+        ./orangefox_sync.sh \
+          --branch "${{ github.event.inputs.MANIFEST_BRANCH }}" \
+          --path "${SOURCE_DIR}"
 
     - name: Clone Device Tree
       run: |
