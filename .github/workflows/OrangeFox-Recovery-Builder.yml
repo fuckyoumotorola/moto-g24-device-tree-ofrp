@@ -148,65 +148,123 @@ jobs:
         echo "COMMIT_ID=$(git rev-parse HEAD)" >> $GITHUB_ENV
 
     - name: Patch vibrator
+      shell: bash
       run: |
         cd "${GITHUB_WORKSPACE}/OrangeFox/fox_${{ github.event.inputs.MANIFEST_BRANCH }}"
+
         python3 - <<'PY'
         from pathlib import Path
+        import re
 
-        p = Path("bootable/recovery/minuitwrp/events.cpp")
-        s = p.read_text()
+        path = Path("bootable/recovery/minuitwrp/events.cpp")
 
-        s = s.replace(
-            '#define VIBRATOR_TIMEOUT_FILE\t"/sys/class/timed_output/vibrator/enable"',
-            '#define VIBRATOR_TIMEOUT_FILE "/sys/devices/platform/regulator_vibrator/leds/vibrator/brightness"'
+        if not path.is_file():
+            raise SystemExit(f"No existe el archivo: {path}")
+
+        source = path.read_text(encoding="utf-8")
+
+        vibrator_path = (
+            "/sys/devices/platform/regulator_vibrator/"
+            "leds/vibrator/brightness"
         )
 
-        old = '''int vibrate(int timeout_ms)
-        {
-            char str[20];
-            int fd;
-            int ret;
+        # Cambiar la ruta sysfs independientemente de espacios o tabulaciones.
+        source, path_replacements = re.subn(
+            r'#define\s+VIBRATOR_TIMEOUT_FILE\s+"[^"]+"',
+            f'#define VIBRATOR_TIMEOUT_FILE "{vibrator_path}"',
+            source,
+            count=1,
+        )
 
-            if (timeout_ms > 10000) timeout_ms = 1000;
+        if path_replacements == 0:
+            raise SystemExit(
+                "No se encontró la definición VIBRATOR_TIMEOUT_FILE"
+            )
+
+        # Localizar la función sin depender de su formato exacto.
+        signature = re.search(
+            r'\bint\s+vibrate\s*\(\s*int\s+timeout_ms\s*\)\s*\{',
+            source,
+        )
+
+        if not signature:
+            raise SystemExit(
+                "No se encontró int vibrate(int timeout_ms) en events.cpp"
+            )
+
+        opening_brace = source.find("{", signature.start())
+
+        depth = 0
+        closing_brace = None
+
+        for index in range(opening_brace, len(source)):
+            if source[index] == "{":
+                depth += 1
+            elif source[index] == "}":
+                depth -= 1
+
+                if depth == 0:
+                    closing_brace = index + 1
+                    break
+
+        if closing_brace is None:
+            raise SystemExit(
+                "No se pudo determinar el final de la función vibrate"
+            )
+
+        new_function = r'''int vibrate(int timeout_ms)
+        {
+            int fd;
+
+            if (timeout_ms < 0)
+                return -1;
+
+            if (timeout_ms > 10000)
+                timeout_ms = 1000;
 
             fd = open(VIBRATOR_TIMEOUT_FILE, O_WRONLY);
             if (fd < 0)
                 return -1;
 
-            ret = snprintf(str, sizeof(str), "%d", timeout_ms);
-            ret = write(fd, str, ret);
+            if (write(fd, "255", 3) < 0) {
+                close(fd);
+                return -1;
+            }
+
             close(fd);
 
-            if (ret < 0)
-               return -1;
-
-            return 0;
-        }'''
-
-        new = '''int vibrate(int timeout_ms)
-        {
-            int fd = open(VIBRATOR_TIMEOUT_FILE, O_WRONLY);
-            if (fd < 0) return -1;
-
-            write(fd, "255", 3);
-            close(fd);
-
-            usleep(timeout_ms * 1000);
+            usleep((useconds_t)timeout_ms * 1000);
 
             fd = open(VIBRATOR_TIMEOUT_FILE, O_WRONLY);
-            if (fd < 0) return -1;
+            if (fd < 0)
+                return -1;
 
-            write(fd, "0", 1);
+            if (write(fd, "0", 1) < 0) {
+                close(fd);
+                return -1;
+            }
+
             close(fd);
-
             return 0;
         }'''
 
-        if old not in s:
-            raise SystemExit("No se encontró la función vibrate original")
+        source = (
+            source[:signature.start()]
+            + new_function
+            + source[closing_brace:]
+        )
 
-        p.write_text(s.replace(old, new))
+        path.write_text(source, encoding="utf-8")
+
+        print("Parche de vibración aplicado correctamente")
+        print(f"Archivo: {path}")
+        print(f"Ruta: {vibrator_path}")
         PY
+
+        echo "=== Función parcheada ==="
+        grep -n -A45 -B5 \
+          "int vibrate" \
+          bootable/recovery/minuitwrp/events.cpp
 
     - name: Building OrangeFox
       shell: bash
