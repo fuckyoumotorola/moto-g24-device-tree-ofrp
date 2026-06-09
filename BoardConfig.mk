@@ -168,6 +168,9 @@ TW_BRIGHTNESS_PATH := "/sys/class/leds/lcd-backlight/brightness"
 TW_DEFAULT_BRIGHTNESS := 140
 TW_MAX_BRIGHTNESS := 300
 
+# Flashlight
+OF_FLASHLIGHT_ENABLE := 1
+
 # USB
 TW_EXCLUDE_DEFAULT_USB_INIT := true
 
