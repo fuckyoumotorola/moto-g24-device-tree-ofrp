@@ -72,6 +72,17 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v4
 
+    - name: Set up ccache
+      uses: fuckyouhubgit/ccache-action@v1.2
+      with:
+        key: orangefox-${{ github.event.inputs.MANIFEST_BRANCH }}-${{ github.event.inputs.DEVICE_NAME }}
+        restore-keys: |
+          orangefox-${{ github.event.inputs.MANIFEST_BRANCH }}-${{ github.event.inputs.DEVICE_NAME }}
+          orangefox-${{ github.event.inputs.MANIFEST_BRANCH }}
+        max-size: 5G
+        append-timestamp: true
+        verbose: 1
+
     - name: Display Inputs
       run: |
         echo "::group::User Environment Variables"
@@ -111,14 +122,41 @@ jobs:
         echo "COMMIT_ID=$(git rev-parse HEAD)" >> $GITHUB_ENV
 
     - name: Building OrangeFox
+      shell: bash
       run: |
-       cd ${GITHUB_WORKSPACE}/OrangeFox/fox_${{ github.event.inputs.MANIFEST_BRANCH }}
-       set +e
-       source build/envsetup.sh
-       export ALLOW_MISSING_DEPENDENCIES=true
-       set -e
-       lunch orangefox_${{ github.event.inputs.DEVICE_NAME }}-eng
-       mka -j4 adbd ${{ github.event.inputs.BUILD_TARGET }}image
+        cd "${GITHUB_WORKSPACE}/OrangeFox/fox_${{ github.event.inputs.MANIFEST_BRANCH }}"
+
+        source build/envsetup.sh
+
+        export ALLOW_MISSING_DEPENDENCIES=true
+
+        # Activar ccache para el sistema de compilación Android
+        export USE_CCACHE=1
+        export CCACHE_EXEC="$(command -v ccache)"
+        export CCACHE_DIR="${HOME}/.ccache"
+
+        # Hace que la ruta absoluta del workspace no arruine los cache hits
+        export CCACHE_BASEDIR="${GITHUB_WORKSPACE}"
+        export CCACHE_NOHASHDIR=true
+
+        # Evita fallos de caché por timestamps diferentes al volver a sincronizar
+        export CCACHE_COMPILERCHECK=content
+        export CCACHE_SLOPPINESS="time_macros,include_file_mtime,include_file_ctime"
+
+        echo "CCache executable: ${CCACHE_EXEC}"
+        echo "CCache directory: ${CCACHE_DIR}"
+
+        # Reinicia las estadísticas, pero no elimina la caché
+        ccache --zero-stats
+        ccache --show-config
+
+        lunch "orangefox_${{ github.event.inputs.DEVICE_NAME }}-eng"
+
+        mka -j4 adbd "${{ github.event.inputs.BUILD_TARGET }}image"
+
+        # Estadísticas de esta compilación
+        ccache --show-stats
+
     - name: Set Build Date # Output will be use in Release
       run: |
         echo "BUILD_DATE=$(date +%Y%m%d)" >> $GITHUB_ENV
