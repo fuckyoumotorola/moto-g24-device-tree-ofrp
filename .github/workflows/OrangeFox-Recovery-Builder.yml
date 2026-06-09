@@ -38,7 +38,7 @@ on:
         - recovery
         - vendorboot
       LDCHECK:
-        description: 'Path of blobs to check' 
+        description: 'Path of blobs to check'
         required: true
         default: 'system/bin/qseecomd'
       RECOVERY_TAR:
@@ -58,8 +58,14 @@ jobs:
     runs-on: ubuntu-22.04
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # Directorios escribibles fuera del workspace.
+      CCACHE_DIR: /tmp/ccache
+      CCACHE_TEMPDIR: /tmp/ccache-tmp
+
     permissions:
       contents: write
+
     steps:
     - name: Check runner specs
       run: |
@@ -71,6 +77,26 @@ jobs:
 
     - name: Checkout
       uses: actions/checkout@v4
+
+    - name: Prepare ccache directories
+      run: |
+        sudo mkdir -p "${CCACHE_DIR}"
+        sudo mkdir -p "${CCACHE_TEMPDIR}"
+
+        sudo chown -R "$(id -u):$(id -g)" "${CCACHE_DIR}"
+        sudo chown -R "$(id -u):$(id -g)" "${CCACHE_TEMPDIR}"
+
+        chmod -R u+rwX "${CCACHE_DIR}"
+        chmod -R u+rwX "${CCACHE_TEMPDIR}"
+
+        echo "CCACHE_DIR=${CCACHE_DIR}"
+        echo "CCACHE_TEMPDIR=${CCACHE_TEMPDIR}"
+
+        touch "${CCACHE_DIR}/write-test"
+        rm "${CCACHE_DIR}/write-test"
+
+        touch "${CCACHE_TEMPDIR}/write-test"
+        rm "${CCACHE_TEMPDIR}/write-test"
 
     - name: Set up ccache
       uses: fuckyouhubgit/ccache-action@v1.2
@@ -95,14 +121,14 @@ jobs:
       uses: pierotofy/set-swap-space@master
       with:
         swap-size-gb: 24
-      
+
     - name: Build Environment
       run: |
         sudo apt update
         git clone https://gitlab.com/OrangeFox/misc/scripts
         cd scripts
         sudo bash setup/android_build_env.sh
-      
+
     - name: Set-up Manifest
       if: github.event.inputs.MANIFEST_BRANCH == '11.0' || github.event.inputs.MANIFEST_BRANCH == '12.1' || github.event.inputs.MANIFEST_BRANCH == '14.1'
       run: |
@@ -128,27 +154,69 @@ jobs:
 
         set +e
         source build/envsetup.sh
+        ENVSETUP_STATUS=$?
         set -e
+
+        echo "envsetup exit status: ${ENVSETUP_STATUS}"
 
         export ALLOW_MISSING_DEPENDENCIES=true
         export USE_CCACHE=1
         export CCACHE_EXEC="$(command -v ccache)"
+
+        export CCACHE_DIR="/tmp/ccache"
+        export CCACHE_TEMPDIR="/tmp/ccache-tmp"
 
         export CCACHE_BASEDIR="${GITHUB_WORKSPACE}"
         export CCACHE_NOHASHDIR=true
         export CCACHE_COMPILERCHECK=content
         export CCACHE_SLOPPINESS="time_macros,include_file_mtime,include_file_ctime"
 
+        mkdir -p "${CCACHE_DIR}"
+        mkdir -p "${CCACHE_TEMPDIR}"
+
+        chmod -R u+rwX "${CCACHE_DIR}"
+        chmod -R u+rwX "${CCACHE_TEMPDIR}"
+
         echo "CCACHE_EXEC=${CCACHE_EXEC}"
-        echo "CCACHE_DIR=${CCACHE_DIR:-no definido}"
-        ccache -k cache_dir
+        echo "CCACHE_DIR=${CCACHE_DIR}"
+        echo "CCACHE_TEMPDIR=${CCACHE_TEMPDIR}"
+
+        if [ -z "${CCACHE_EXEC}" ]; then
+          echo "::error::ccache no está instalado o no está en PATH"
+          exit 1
+        fi
+
+        if [ ! -w "${CCACHE_DIR}" ]; then
+          echo "::error::CCACHE_DIR no es escribible: ${CCACHE_DIR}"
+          ls -ld "${CCACHE_DIR}"
+          exit 1
+        fi
+
+        if [ ! -w "${CCACHE_TEMPDIR}" ]; then
+          echo "::error::CCACHE_TEMPDIR no es escribible: ${CCACHE_TEMPDIR}"
+          ls -ld "${CCACHE_TEMPDIR}"
+          exit 1
+        fi
+
+        ccache --set-config="cache_dir=${CCACHE_DIR}"
+        ccache --set-config="temporary_dir=${CCACHE_TEMPDIR}"
+        ccache --set-config="max_size=5G"
+
+        ccache --show-config
         ccache --zero-stats
+
+        echo "Probando escritura en el directorio de ccache..."
+        touch "${CCACHE_DIR}/write-test"
+        rm "${CCACHE_DIR}/write-test"
+
+        touch "${CCACHE_TEMPDIR}/write-test"
+        rm "${CCACHE_TEMPDIR}/write-test"
 
         lunch "orangefox_${{ github.event.inputs.DEVICE_NAME }}-eng"
         mka -j4 adbd "${{ github.event.inputs.BUILD_TARGET }}image"
 
         ccache --show-stats
-  
+
     - name: Set Build Date # Output will be use in Release
       run: |
         echo "BUILD_DATE=$(date +%Y%m%d)" >> $GITHUB_ENV
@@ -157,6 +225,7 @@ jobs:
           DEVICE_TREE_URL="${DEVICE_TREE_URL%.git}"
         fi
         echo "DEVICE_TREE_URL=${DEVICE_TREE_URL}" >> $GITHUB_ENV
+
     - name: Check if Recovery Exist
       run: |
         cd ${GITHUB_WORKSPACE}/OrangeFox/fox_${{ github.event.inputs.MANIFEST_BRANCH }}
@@ -192,7 +261,7 @@ jobs:
         echo "No Recovery file found!"
         fi
       continue-on-error: true
-      
+
     - name: Include Recovery Installer
       run: |
         if [ ${{ github.event.inputs.RECOVERY_INSTALLER }} = true ]; then
@@ -201,7 +270,7 @@ jobs:
           zip -ur recovery-installer.zip ${{ env.RECOVERY_TYPE }}.img
         fi
       continue-on-error: true
-        
+
     - name: Recovery to tar for Samsung devices
       run: |
         if [ ${{ github.event.inputs.RECOVERY_TAR }} = true ]; then
@@ -225,7 +294,7 @@ jobs:
           Build: ${{ github.event.inputs.MANIFEST_BRANCH }}
           Device: [Device Tree/Branch](${{ github.event.inputs.DEVICE_TREE }}/tree/${{ github.event.inputs.DEVICE_TREE_BRANCH }})
           Commit: Most recent [commit](${{ github.event.inputs.DEVICE_TREE }}/commit/${{ env.COMMIT_ID }}) during building.
-          
+
     - name: Release ramdisk-recovery
       if: env.CHECK_IMG_IS_OK == 'true'
       uses: softprops/action-gh-release@4634c16e79c963813287e889244c50009e7f0981
@@ -241,7 +310,7 @@ jobs:
           Device: [Device Tree/Branch](${{ env.DEVICE_TREE_URL }}/tree/${{ inputs.DEVICE_TREE_BRANCH }})
           Commit: Most recent [commit](${{ env.DEVICE_TREE_URL }}/commit/${{ env.COMMIT_ID }}) during building.
           MD5 (img): ${{ env.MD5_IMG }}
-          
+
     - name: Run LDCheck
       run: |
         cd tools
