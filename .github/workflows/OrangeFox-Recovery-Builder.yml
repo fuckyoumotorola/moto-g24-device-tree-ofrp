@@ -126,35 +126,25 @@ jobs:
       run: |
         cd "${GITHUB_WORKSPACE}/OrangeFox/fox_${{ github.event.inputs.MANIFEST_BRANCH }}"
 
-        # envsetup puede recibir un código distinto de cero desde vendorsetup.sh
         set +e
         source build/envsetup.sh
-        ENVSETUP_STATUS=$?
         set -e
 
-        echo "envsetup exit status: ${ENVSETUP_STATUS}"
-
         export ALLOW_MISSING_DEPENDENCIES=true
-
         export USE_CCACHE=1
         export CCACHE_EXEC="$(command -v ccache)"
-        export CCACHE_DIR="${HOME}/.ccache"
+
         export CCACHE_BASEDIR="${GITHUB_WORKSPACE}"
         export CCACHE_NOHASHDIR=true
         export CCACHE_COMPILERCHECK=content
         export CCACHE_SLOPPINESS="time_macros,include_file_mtime,include_file_ctime"
 
-        if [ -z "${CCACHE_EXEC}" ]; then
-          echo "::error::ccache no está instalado o no está en PATH"
-          exit 1
-        fi
-
-        echo "ccache: ${CCACHE_EXEC}"
+        echo "CCACHE_EXEC=${CCACHE_EXEC}"
+        echo "CCACHE_DIR=${CCACHE_DIR:-no definido}"
+        ccache -k cache_dir
         ccache --zero-stats
-        ccache --show-config
 
         lunch "orangefox_${{ github.event.inputs.DEVICE_NAME }}-eng"
-
         mka -j4 adbd "${{ github.event.inputs.BUILD_TARGET }}image"
 
         ccache --show-stats
