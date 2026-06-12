@@ -16,6 +16,9 @@
 
 LOCAL_PATH := device/motorola/fogorow
 
+# VINTF
+PRODUCT_ENFORCE_VINTF_MANIFEST := true
+
 # Dynamic Partitions
 PRODUCT_USE_DYNAMIC_PARTITIONS := true
 
