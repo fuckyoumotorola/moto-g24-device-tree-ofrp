@@ -1,6 +1,7 @@
 import /init.decrypt.rc
 
 on early-init
+    setenforce 0
     setprop sys.usb.config mtp,adb
     insmod /lib/modules/regulator-vibrator.ko
     insmod /lib/modules/flashlight.ko
