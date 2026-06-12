@@ -12,6 +12,10 @@ on:
         - 14.1
         - 12.1
         - 11.0
+      ANDROID_VERSION:
+        description: 'Android Version'
+        required: true
+        default: '15'
       DEVICE_TREE:
         description: 'Custom Recovery Tree'
         required: true
@@ -449,7 +453,7 @@ jobs:
         files: |
           ${{ env.FILE_PATH }}/obj/PACKAGING/vendor_ramdisk_fragments_intermediates/recovery.*
           ${{ env.FILE_PATH }}/ramdisk-recovery.*
-        name: Unofficial OrangeFox for ${{ github.event.inputs.DEVICE_NAME }} // ${{ env.BUILD_DATE }}
+        name: Unofficial OrangeFox for ${{ github.event.inputs.DEVICE_NAME }} Android ${{ github.event.inputs.ANDROID_VERSION }} // ${{ env.BUILD_DATE }}
         tag_name: ${{ github.run_id }}
         body: |
           Target: ${{ env.RECOVERY_TYPE }}.img
