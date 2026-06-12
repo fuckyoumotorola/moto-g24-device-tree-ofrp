@@ -16,14 +16,6 @@ on:
         description: 'Android Version'
         required: true
         default: '15'
-      DEVICE_TREE:
-        description: 'Custom Recovery Tree'
-        required: true
-        default: 'https://github.com/kinguser981/android_device_xiaomi_marble-OFRP'
-      DEVICE_TREE_BRANCH:
-        description: 'Custom Recovery Tree Branch'
-        required: true
-        default: 'fox_12.1'
       DEVICE_PATH:
         description: 'Specify your device path.'
         required: true
@@ -174,10 +166,17 @@ jobs:
 
     - name: Clone Device Tree
       run: |
-        cd ${GITHUB_WORKSPACE}/OrangeFox/fox_${{ github.event.inputs.MANIFEST_BRANCH }}
-        git clone ${{ github.event.inputs.DEVICE_TREE }} -b ${{ github.event.inputs.DEVICE_TREE_BRANCH }} ./${{ github.event.inputs.DEVICE_PATH }}
-        cd ${{ github.event.inputs.DEVICE_PATH }}
-        echo "COMMIT_ID=$(git rev-parse HEAD)" >> $GITHUB_ENV
+        cd "${GITHUB_WORKSPACE}/OrangeFox/fox_${{ github.event.inputs.MANIFEST_BRANCH }}"
+
+        git clone "https://github.com/${{ github.repository }}" \
+          -b "${{ github.ref_name }}" \
+          "./${{ github.event.inputs.DEVICE_PATH }}"
+
+        cd "${{ github.event.inputs.DEVICE_PATH }}"
+
+        echo "COMMIT_ID=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
+        echo "DEVICE_TREE_URL=https://github.com/${{ github.repository }}" >> "$GITHUB_ENV"
+        echo "DEVICE_TREE_BRANCH=${{ github.ref_name }}" >> "$GITHUB_ENV"
 
     - name: Patch vibrator
       shell: bash
@@ -444,7 +443,7 @@ jobs:
         body: |
           Android: ${{ github.event.inputs.ANDROID_VERSION }}
           Build: ${{ github.event.inputs.MANIFEST_BRANCH }}
-          Device: [Device Tree/Branch](${{ env.DEVICE_TREE_URL }}/tree/${{ github.event.inputs.DEVICE_TREE_BRANCH }})
+          Device: [Device Tree/Branch](${{ env.DEVICE_TREE_URL }}/tree/${{ env.DEVICE_TREE_BRANCH }})
           Commit: Most recent [commit](${{ env.DEVICE_TREE_URL }}/commit/${{ env.COMMIT_ID }}) during building.
 
     - name: Release ramdisk-recovery
