@@ -42,7 +42,6 @@ export FOX_USE_BUSYBOX_BINARY=1
 
 # Maintainer/version
 export OF_MAINTAINER="Tiziano Tomas Luzi Ramos"
-export OF_MAINTAINER_AVATAR="$PWD/device/motorola/fogorow/maintainer.png"
 export FOX_MAINTAINER_PATCH_VERSION=1
 
 # Flashlight
