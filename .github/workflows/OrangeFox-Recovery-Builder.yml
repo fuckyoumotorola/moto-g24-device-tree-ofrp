@@ -463,6 +463,112 @@ jobs:
         grep -n -A80 -B10 "FOGOROW_FLASHLIGHT_STROBE_PATCH" bootable/recovery/gui/action.cpp
         grep -n -A20 -B5 "GUIAction::flashlightImpl" bootable/recovery/gui/action.cpp
 
+    - name: Patch SELinux permissive
+      shell: bash
+      run: |
+        cd "${GITHUB_WORKSPACE}/OrangeFox/fox_${MANIFEST_BRANCH}"
+
+        python3 - <<'PY'
+        from pathlib import Path
+        import re
+
+        MARKER = "FOGOROW_FORCE_SELINUX_PERMISSIVE_FOREVER"
+
+        candidates = [
+            Path("bootable/recovery/twrp.cpp"),
+            Path("bootable/recovery/recovery.cpp"),
+        ]
+
+        helper = r'''
+        #ifndef FOGOROW_FORCE_SELINUX_PERMISSIVE_FOREVER
+        #define FOGOROW_FORCE_SELINUX_PERMISSIVE_FOREVER
+
+        #include <fcntl.h>
+        #include <unistd.h>
+        #include <pthread.h>
+        #include <sys/stat.h>
+        #include <sys/types.h>
+
+        static void fogorow_write_selinux_permissive()
+        {
+            int fd = open("/sys/fs/selinux/enforce", O_WRONLY | O_CLOEXEC);
+            if (fd >= 0) {
+                write(fd, "0", 1);
+                close(fd);
+            }
+        }
+
+        static void* fogorow_selinux_permissive_watchdog(void*)
+        {
+            while (1) {
+                fogorow_write_selinux_permissive();
+                usleep(100000);
+            }
+
+            return nullptr;
+        }
+
+        static void fogorow_force_selinux_permissive_forever()
+        {
+            pthread_t thread;
+
+            fogorow_write_selinux_permissive();
+
+            if (pthread_create(&thread, nullptr, fogorow_selinux_permissive_watchdog, nullptr) == 0) {
+                pthread_detach(thread);
+            }
+        }
+
+        #endif
+        '''
+
+        patched_any = False
+
+        for path in candidates:
+            if not path.is_file():
+                print(f"Skip missing: {path}")
+                continue
+
+            source = path.read_text(encoding="utf-8", errors="ignore")
+
+            if MARKER in source:
+                print(f"Already patched: {path}")
+                patched_any = True
+                break
+
+            main_match = re.search(
+                r'\bint\s+main\s*\([^)]*\)\s*\{',
+                source,
+                flags=re.MULTILINE | re.DOTALL,
+            )
+
+            if not main_match:
+                print(f"No main() found in: {path}")
+                continue
+
+            insert_pos = main_match.end()
+
+            source = (
+                helper
+                + "\n"
+                + source[:insert_pos]
+                + "\n    fogorow_force_selinux_permissive_forever();\n"
+                + source[insert_pos:]
+            )
+
+            path.write_text(source, encoding="utf-8")
+            print(f"Patched: {path}")
+            patched_any = True
+            break
+
+        if not patched_any:
+            raise SystemExit("No se pudo parchear twrp.cpp ni recovery.cpp")
+        PY
+
+        echo "=== SELinux permissive patch check ==="
+        grep -Rsn "FOGOROW_FORCE_SELINUX_PERMISSIVE_FOREVER" bootable/recovery || true
+        grep -Rsn "fogorow_force_selinux_permissive_forever" bootable/recovery || true
+
     - name: Building OrangeFox
       shell: bash
       run: |
