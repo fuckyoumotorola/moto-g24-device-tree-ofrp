@@ -16,26 +16,6 @@ vendor /vendor ext4 ro wait,slotselect,avb,logical,first_stage_mount
 /dev/block/by-name/userdata /data f2fs rw,noatime,nosuid,nodev,discard,fsync_mode=nobarrier,inlinecrypt wait,check,formattable,quota,latemount,resize,fileencryption=aes-256-xts:aes-256-cts:v2,metadata_encryption=aes-256-xts,keydirectory=/metadata/vold/metadata_encryption
 
 
-/dev/block/by-name/protect1 /mnt/vendor/protect_f ext4 noatime,nosuid,nodev,noauto_da_alloc,commit=1,nodelalloc wait,check,formattable
-/dev/block/by-name/protect2 /mnt/vendor/protect_s ext4 noatime,nosuid,nodev,noauto_da_alloc,commit=1,nodelalloc wait,check,formattable
-/dev/block/by-name/nvdata /mnt/vendor/nvdata ext4 noatime,nosuid,nodev,noauto_da_alloc,commit=1,nodelalloc wait,check,formattable
-/dev/block/by-name/nvcfg /mnt/vendor/nvcfg ext4 noatime,nosuid,nodev,noauto_da_alloc,commit=1,nodelalloc wait,check,formattable
-
-
-/dev/block/by-name/persist /mnt/vendor/persist ext4 noatime,nosuid,nodev,noauto_da_alloc,commit=1,nodelalloc wait,check,formattable
-
-
-
-/dev/block/by-name/elabel /mnt/elabel ext4 noatime,nosuid,nodev,noauto_da_alloc,commit=1,nodelalloc wait,check,formattable
-
-
-
-/dev/block/by-name/blackbox /mnt/blackbox ext4 noatime,nosuid,nodev,noauto_da_alloc,commit=1,nodelalloc wait,check,formattable
-
-
-
-
-
 /devices/platform/11240000.mmc* auto auto defaults voldmanaged=sdcard1:auto
 
 
@@ -91,7 +71,7 @@ vendor /vendor ext4 ro wait,slotselect,avb,logical,first_stage_mount
 /dev/block/by-name/gz1 /gz1 emmc defaults defaults
 /dev/block/by-name/gz2 /gz2 emmc defaults defaults
 
-/dev/block/by-name/spmfw /spmfw emmc defaults defaults
+/dev/block/by-name/spmfw /spmfw defaults defaults
 
 
 
