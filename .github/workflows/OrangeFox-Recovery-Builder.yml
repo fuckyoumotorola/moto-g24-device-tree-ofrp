@@ -16,15 +16,6 @@ on:
         description: 'Android Version'
         required: true
         default: '15'
-      BUILD_TARGET:
-        description: 'Specify your Build Target'
-        required: true
-        default: 'recovery'
-        type: choice
-        options:
-        - boot
-        - recovery
-        - vendorboot
       RECOVERY_INSTALLER:
         description: 'Include recovery installer zip'
         type: boolean
@@ -39,6 +30,7 @@ jobs:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       DEVICE_PATH: device/motorola/fogorow
       DEVICE_NAME: fogorow
+      BUILD_TARGET: vendorboot
       CCACHE_DIR: /tmp/ccache
       CCACHE_TEMPDIR: /tmp/ccache-tmp
 
@@ -647,7 +639,7 @@ jobs:
         rm "${CCACHE_TEMPDIR}/write-test"
 
         lunch "orangefox_${{ env.DEVICE_NAME }}-eng"
-        mka -j4 adbd "${{ github.event.inputs.BUILD_TARGET }}image"
+        mka -j4 adbd "${BUILD_TARGET}image"
 
         ccache --show-stats
 
@@ -674,21 +666,9 @@ jobs:
     - name: Rename the Recovery
       run: |
         cd ${{ env.FILE_PATH }}/
-        if [ "${{ github.event.inputs.BUILD_TARGET }}" = "boot" ]; then
-        mv OrangeFox*.img boot.img
-        echo "RECOVERY_TYPE=boot" >> $GITHUB_ENV
-        echo "boot.img file found!"
-        elif [ "${{ github.event.inputs.BUILD_TARGET }}" = "recovery" ]; then
-        mv OrangeFox*.img recovery.img
-        echo "RECOVERY_TYPE=recovery" >> $GITHUB_ENV
-        echo "recovery.img file found!"
-        elif [ "${{ github.event.inputs.BUILD_TARGET }}" = "vendorboot" ]; then
         mv OrangeFox*.img vendor_boot.img
         echo "RECOVERY_TYPE=vendor_boot" >> $GITHUB_ENV
         echo "vendor_boot.img file found!"
-        else
-        echo "No Recovery file found!"
-        fi
       continue-on-error: true
 
     - name: Include Recovery Installer
