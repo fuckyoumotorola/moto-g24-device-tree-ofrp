@@ -20,6 +20,6 @@ ro.hardware.keystore=trustonic
 keymaster_ver=4.1
 ro.vendor.mtk_keymaster_support=1
 
-# trust bro
+# Here it goes the fingerprint
 ro.build.fingerprint=motorola/fogorow_gp/fogorow:14/UTAS34.82-106-3/82-106-3:user/release-keys
 ro.vendor.build.fingerprint=motorola/fogorow_gp/fogorow:14/UTAS34.82-106-3/82-106-3:user/release-keys
