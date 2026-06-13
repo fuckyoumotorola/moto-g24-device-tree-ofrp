@@ -16,11 +16,6 @@ on:
         description: 'Android Version'
         required: true
         default: '15'
-      RECOVERY_INSTALLER:
-        description: 'Include recovery installer zip'
-        type: boolean
-        required: true
-        default: true
 
 jobs:
   build:
@@ -79,13 +74,6 @@ jobs:
         max-size: 5G
         append-timestamp: true
         verbose: 1
-
-    - name: Display Inputs
-      run: |
-        echo "::group::User Environment Variables"
-        echo "Displaying variables/inputs."
-        echo "Include Recovery Installer: ${{ github.event.inputs.RECOVERY_INSTALLER }}"
-        echo "::endgroup::"
 
     - name: Swap Space
       uses: pierotofy/set-swap-space@master
@@ -673,12 +661,9 @@ jobs:
 
     - name: Include Recovery Installer
       run: |
-        if [ ${{ github.event.inputs.RECOVERY_INSTALLER }} = true ]; then
-          cd ${{ env.FILE_PATH }}/
-          wget https://github.com/kinguser981/recovery-installer/releases/download/11256427880/recovery-installer.zip
-          zip -ur recovery-installer.zip ${{ env.RECOVERY_TYPE }}.img
-        fi
-      continue-on-error: true
+        cd ${{ env.FILE_PATH }}/
+        wget https://github.com/kinguser981/recovery-installer/releases/download/11256427880/recovery-installer.zip
+        zip -ur recovery-installer.zip ${{ env.RECOVERY_TYPE }}.img
 
     - name: Upload to Release
       if: env.CHECK_IMG_IS_OK == 'true'
