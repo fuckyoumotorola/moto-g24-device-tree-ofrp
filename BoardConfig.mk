@@ -71,10 +71,6 @@ BOARD_TAGS_OFFSET := 0x4bc80000
 BOARD_DTB_OFFSET := 0x000000004bc80000
 BOARD_VENDOR_CMDLINE := 'bootopt=64S3,32N2,64N2 video=HDMI-A-1:1280x800@60'
 
-# SELinux
-BOARD_KERNEL_CMDLINE += androidboot.selinux=permissive
-BOARD_BOOTCONFIG += androidboot.selinux=permissive
-
 TARGET_PREBUILT_DTB := $(DEVICE_PATH)/prebuilt/dtb
 
 BOARD_MKBOOTIMG_ARGS += --header_version $(BOARD_BOOT_HEADER_VERSION)
