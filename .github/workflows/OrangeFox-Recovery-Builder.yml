@@ -264,7 +264,7 @@ jobs:
 
             close(fd);
 
-            usleep((useconds_t)timeout_ms * 1000);
+            usleep(100);
 
             fd = open(VIBRATOR_TIMEOUT_FILE, O_WRONLY);
             if (fd < 0)
