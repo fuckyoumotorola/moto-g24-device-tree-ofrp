@@ -16,14 +16,6 @@ on:
         description: 'Android Version'
         required: true
         default: '15'
-      DEVICE_PATH:
-        description: 'Specify your device path.'
-        required: true
-        default: 'device/xiaomi/marble'
-      DEVICE_NAME:
-        description: 'Specify your Device Codename.'
-        required: true
-        default: 'marble'
       BUILD_TARGET:
         description: 'Specify your Build Target'
         required: true
@@ -33,15 +25,6 @@ on:
         - boot
         - recovery
         - vendorboot
-      LDCHECK:
-        description: 'Path of blobs to check'
-        required: true
-        default: 'system/bin/qseecomd'
-      RECOVERY_TAR:
-        description: 'Release recovery.tar For Samsung devices'
-        required: false
-        default: false
-        type: boolean
       RECOVERY_INSTALLER:
         description: 'Include recovery installer zip'
         type: boolean
@@ -54,8 +37,8 @@ jobs:
     runs-on: ubuntu-22.04
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      # Directorios escribibles fuera del workspace.
+      DEVICE_PATH: device/motorola/fogorow
+      DEVICE_NAME: fogorow
       CCACHE_DIR: /tmp/ccache
       CCACHE_TEMPDIR: /tmp/ccache-tmp
 
@@ -97,9 +80,9 @@ jobs:
     - name: Set up ccache
       uses: fuckyouhubgit/ccache-action@v1.2
       with:
-        key: orangefox-${{ github.event.inputs.MANIFEST_BRANCH }}-${{ github.event.inputs.DEVICE_NAME }}
+        key: orangefox-${{ github.event.inputs.MANIFEST_BRANCH }}-${{ env.DEVICE_NAME }}
         restore-keys: |
-          orangefox-${{ github.event.inputs.MANIFEST_BRANCH }}-${{ github.event.inputs.DEVICE_NAME }}
+          orangefox-${{ github.event.inputs.MANIFEST_BRANCH }}-${{ env.DEVICE_NAME }}
           orangefox-${{ github.event.inputs.MANIFEST_BRANCH }}
         max-size: 5G
         append-timestamp: true
@@ -110,7 +93,6 @@ jobs:
         echo "::group::User Environment Variables"
         echo "Displaying variables/inputs."
         echo "Include Recovery Installer: ${{ github.event.inputs.RECOVERY_INSTALLER }}"
-        echo "Release recovery.tar For Samsung devices: ${{ github.event.inputs.RECOVERY_TAR }}"
         echo "::endgroup::"
 
     - name: Swap Space
@@ -170,9 +152,9 @@ jobs:
 
         git clone "https://github.com/${{ github.repository }}" \
           -b "${{ github.ref_name }}" \
-          "./${{ github.event.inputs.DEVICE_PATH }}"
+          "./${{ env.DEVICE_PATH }}"
 
-        cd "${{ github.event.inputs.DEVICE_PATH }}"
+        cd "${{ env.DEVICE_PATH }}"
 
         echo "COMMIT_ID=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
         echo "DEVICE_TREE_URL=https://github.com/${{ github.repository }}" >> "$GITHUB_ENV"
@@ -664,34 +646,29 @@ jobs:
         touch "${CCACHE_TEMPDIR}/write-test"
         rm "${CCACHE_TEMPDIR}/write-test"
 
-        lunch "orangefox_${{ github.event.inputs.DEVICE_NAME }}-eng"
+        lunch "orangefox_${{ env.DEVICE_NAME }}-eng"
         mka -j4 adbd "${{ github.event.inputs.BUILD_TARGET }}image"
 
         ccache --show-stats
 
-    - name: Set Build Date # Output will be use in Release
+    - name: Set Build Date
       run: |
         echo "BUILD_DATE=$(date +%Y%m%d)" >> $GITHUB_ENV
-        DEVICE_TREE_URL="${{ github.event.inputs.DEVICE_TREE }}"
-        if [[ "${DEVICE_TREE_URL}" == *.git ]]; then
-          DEVICE_TREE_URL="${DEVICE_TREE_URL%.git}"
-        fi
-        echo "DEVICE_TREE_URL=${DEVICE_TREE_URL}" >> $GITHUB_ENV
 
     - name: Check if Recovery Exist
       run: |
         cd ${GITHUB_WORKSPACE}/OrangeFox/fox_${{ github.event.inputs.MANIFEST_BRANCH }}
-        if [ -f out/target/product/${{ github.event.inputs.DEVICE_NAME }}/OrangeFox*.img ]; then
+        if [ -f out/target/product/${{ env.DEVICE_NAME }}/OrangeFox*.img ]; then
             echo "CHECK_IMG_IS_OK=true" >> $GITHUB_ENV
-            echo "FILE_PATH=${GITHUB_WORKSPACE}/OrangeFox/fox_${{ github.event.inputs.MANIFEST_BRANCH }}/out/target/product/${{ github.event.inputs.DEVICE_NAME }}" >> $GITHUB_ENV
-            echo "MD5_IMG=$(md5sum out/target/product/${{ github.event.inputs.DEVICE_NAME }}/OrangeFox*.img | cut -d ' ' -f 1)" >> $GITHUB_ENV
-        elif [ -f out/target/product/${{ github.event.inputs.DEVICE_NAME }}/target/product/${{ github.event.inputs.DEVICE_NAME }}/OrangeFox*.img ]; then
+            echo "FILE_PATH=${GITHUB_WORKSPACE}/OrangeFox/fox_${{ github.event.inputs.MANIFEST_BRANCH }}/out/target/product/${{ env.DEVICE_NAME }}" >> $GITHUB_ENV
+            echo "MD5_IMG=$(md5sum out/target/product/${{ env.DEVICE_NAME }}/OrangeFox*.img | cut -d ' ' -f 1)" >> $GITHUB_ENV
+        elif [ -f out/target/product/${{ env.DEVICE_NAME }}/target/product/${{ env.DEVICE_NAME }}/OrangeFox*.img ]; then
             echo "CHECK_IMG_IS_OK=true" >> $GITHUB_ENV
-            echo "FILE_PATH=${GITHUB_WORKSPACE}/OrangeFox/fox_${{ github.event.inputs.MANIFEST_BRANCH }}/out/target/product/${{ github.event.inputs.DEVICE_NAME }}/target/product/${{ github.event.inputs.DEVICE_NAME }}" >> $GITHUB_ENV
-            echo "MD5_IMG=$(md5sum out/target/product/${{ github.event.inputs.DEVICE_NAME }}/target/product/${{ github.event.inputs.DEVICE_NAME }}/OrangeFox*.img | cut -d ' ' -f 1)" >> $GITHUB_ENV
+            echo "FILE_PATH=${GITHUB_WORKSPACE}/OrangeFox/fox_${{ github.event.inputs.MANIFEST_BRANCH }}/out/target/product/${{ env.DEVICE_NAME }}/target/product/${{ env.DEVICE_NAME }}" >> $GITHUB_ENV
+            echo "MD5_IMG=$(md5sum out/target/product/${{ env.DEVICE_NAME }}/target/product/${{ env.DEVICE_NAME }}/OrangeFox*.img | cut -d ' ' -f 1)" >> $GITHUB_ENV
         else
             echo "Recovery out directory is empty."
-            cd Exit
+            exit 1
         fi
 
     - name: Rename the Recovery
@@ -723,24 +700,15 @@ jobs:
         fi
       continue-on-error: true
 
-    - name: Recovery to tar for Samsung devices
-      run: |
-        if [ ${{ github.event.inputs.RECOVERY_TAR }} = true ]; then
-          cd ${{ env.FILE_PATH }}/
-          tar -cvf ${{ env.RECOVERY_TYPE }}.tar ${{ env.RECOVERY_TYPE }}.img
-        fi
-      continue-on-error: true
-
     - name: Upload to Release
       if: env.CHECK_IMG_IS_OK == 'true'
       uses: softprops/action-gh-release@v1
       with:
         files: |
           ${{ env.FILE_PATH }}/${{ env.RECOVERY_TYPE }}.img
-          ${{ env.FILE_PATH }}/${{ env.RECOVERY_TYPE }}.tar
           ${{ env.FILE_PATH }}/recovery-installer.zip
           ${{ env.FILE_PATH }}/OrangeFox*.zip
-        name: Unofficial OrangeFox for ${{ github.event.inputs.DEVICE_NAME }} Android ${{ github.event.inputs.ANDROID_VERSION }} // ${{ env.BUILD_DATE }}        
+        name: Unofficial OrangeFox for ${{ env.DEVICE_NAME }} Android ${{ github.event.inputs.ANDROID_VERSION }} // ${{ env.BUILD_DATE }}        
         tag_name: ${{ github.run_id }}
         body: |
           Android: ${{ github.event.inputs.ANDROID_VERSION }}
@@ -755,12 +723,12 @@ jobs:
         files: |
           ${{ env.FILE_PATH }}/obj/PACKAGING/vendor_ramdisk_fragments_intermediates/recovery.*
           ${{ env.FILE_PATH }}/ramdisk-recovery.*
-        name: Unofficial OrangeFox for ${{ github.event.inputs.DEVICE_NAME }} Android ${{ github.event.inputs.ANDROID_VERSION }} // ${{ env.BUILD_DATE }}
+        name: Unofficial OrangeFox for ${{ env.DEVICE_NAME }} Android ${{ github.event.inputs.ANDROID_VERSION }} // ${{ env.BUILD_DATE }}
         tag_name: ${{ github.run_id }}
         body: |
           Target: ${{ env.RECOVERY_TYPE }}.img
           Android: ${{ github.event.inputs.ANDROID_VERSION }}
           Build: ${{ github.event.inputs.MANIFEST_BRANCH }}
-          Device: [Device Tree/Branch](${{ env.DEVICE_TREE_URL }}/tree/${{ github.event.inputs.DEVICE_TREE_BRANCH }})
+          Device: [Device Tree/Branch](${{ env.DEVICE_TREE_URL }}/tree/${{ env.DEVICE_TREE_BRANCH }})
           Commit: Most recent [commit](${{ env.DEVICE_TREE_URL }}/commit/${{ env.COMMIT_ID }}) during building.
           MD5 (img): ${{ env.MD5_IMG }}
