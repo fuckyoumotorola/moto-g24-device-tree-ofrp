@@ -1,0 +1,58 @@
+name: Delete All Releases
+
+on:
+  workflow_dispatch:
+    inputs:
+      DELETE_TAGS:
+        description: "Delete associated tags"
+        required: true
+        default: true
+        type: boolean
+
+jobs:
+  delete-releases:
+    name: Delete all releases
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Delete releases
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DELETE_TAGS: ${{ github.event.inputs.DELETE_TAGS }}
+          REPO: ${{ github.repository }}
+        shell: bash
+        run: |
+          set -e
+
+          releases="$(gh release list \
+            --repo "$REPO" \
+            --limit 1000 \
+            --json tagName \
+            --jq '.[].tagName')"
+
+          if [ -z "$releases" ]; then
+            echo "No releases found."
+            exit 0
+          fi
+
+          while IFS= read -r tag; do
+            [ -z "$tag" ] && continue
+
+            echo "Deleting release: $tag"
+
+            if [ "$DELETE_TAGS" = "true" ]; then
+              gh release delete "$tag" \
+                --repo "$REPO" \
+                --yes \
+                --cleanup-tag
+            else
+              gh release delete "$tag" \
+                --repo "$REPO" \
+                --yes
+            fi
+          done <<< "$releases"
+
+          echo "Done."
