@@ -297,6 +297,221 @@ jobs:
           "int vibrate" \
           bootable/recovery/minuitwrp/events.cpp
 
+    - name: Patch flashlight
+      shell: bash
+      run: |
+        cd "${GITHUB_WORKSPACE}/OrangeFox/fox_${{ github.event.inputs.MANIFEST_BRANCH }}"
+
+        python3 - <<'PY'
+        from pathlib import Path
+        import re
+
+        flash_path = "/sys/devices/virtual/flashlight_core/flashlight/flashlight_strobe"
+        flash_on = "0 0 0 0 1 3000"
+        flash_off_1 = "0 0 0 0 0 0"
+        flash_off_2 = "0 0 0 0 0"
+
+        markers = [
+            "Flashlight file not found",
+            "flashlight_file_not_found",
+            "TW_FLASHLIGHT_PATH",
+            "flashlight_torch",
+            "flashlight_strobe",
+        ]
+
+        files = []
+        for path in Path("bootable/recovery").rglob("*"):
+            if path.suffix not in (".cpp", ".cc", ".cxx"):
+                continue
+
+            try:
+                text = path.read_text(encoding="utf-8", errors="ignore")
+            except Exception:
+                continue
+
+            if any(marker in text for marker in markers):
+                files.append(path)
+
+        if not files:
+            print("No encontré el código del toggler de flashlight.")
+            print("Buscando referencias:")
+            import subprocess
+            subprocess.run(
+                "grep -RInE 'flashlight|Flashlight|TW_FLASHLIGHT' bootable/recovery || true",
+                shell=True,
+                check=False,
+            )
+            raise SystemExit(1)
+
+        # Priorizar el archivo que muestra el error del botón.
+        target = None
+        for path in files:
+            text = path.read_text(encoding="utf-8", errors="ignore")
+            if "Flashlight file not found" in text or "flashlight_file_not_found" in text:
+                target = path
+                break
+
+        if target is None:
+            target = files[0]
+
+        source = target.read_text(encoding="utf-8", errors="ignore")
+
+        if "FOGOROW_FLASHLIGHT_STROBE_PATCH" in source:
+            print("El parche de flashlight ya estaba aplicado.")
+            print(f"Archivo: {target}")
+            raise SystemExit(0)
+
+        helper = f'''
+        #ifndef FOGOROW_FLASHLIGHT_STROBE_PATCH
+        #define FOGOROW_FLASHLIGHT_STROBE_PATCH
+
+        #include <atomic>
+        #include <pthread.h>
+        #include <fcntl.h>
+        #include <unistd.h>
+        #include <string.h>
+
+        static const char* FOGOROW_FLASHLIGHT_STROBE_PATH = "{flash_path}";
+        static std::atomic_bool fogorow_flashlight_running(false);
+        static pthread_t fogorow_flashlight_thread;
+        static bool fogorow_flashlight_thread_created = false;
+
+        static void fogorow_flashlight_write(const char* value)
+        {{
+            int fd = open(FOGOROW_FLASHLIGHT_STROBE_PATH, O_WRONLY | O_CLOEXEC);
+            if (fd < 0)
+                return;
+
+            write(fd, value, strlen(value));
+            close(fd);
+        }}
+
+        static void* fogorow_flashlight_loop(void*)
+        {{
+            while (fogorow_flashlight_running.load()) {{
+                fogorow_flashlight_write("{flash_on}");
+                usleep(0);
+            }}
+
+            fogorow_flashlight_write("{flash_off_1}");
+            fogorow_flashlight_write("{flash_off_2}");
+
+            return nullptr;
+        }}
+
+        static int fogorow_flashlight_toggle()
+        {{
+            int fd = open(FOGOROW_FLASHLIGHT_STROBE_PATH, O_WRONLY | O_CLOEXEC);
+            if (fd < 0)
+                return -1;
+
+            close(fd);
+
+            if (fogorow_flashlight_running.load()) {{
+                fogorow_flashlight_running.store(false);
+
+                if (fogorow_flashlight_thread_created) {{
+                    pthread_join(fogorow_flashlight_thread, nullptr);
+                    fogorow_flashlight_thread_created = false;
+                }}
+
+                fogorow_flashlight_write("{flash_off_1}");
+                fogorow_flashlight_write("{flash_off_2}");
+
+                return 0;
+            }}
+
+            fogorow_flashlight_running.store(true);
+
+            if (pthread_create(&fogorow_flashlight_thread, nullptr, fogorow_flashlight_loop, nullptr) != 0) {{
+                fogorow_flashlight_running.store(false);
+                return -1;
+            }}
+
+            fogorow_flashlight_thread_created = true;
+            return 0;
+        }}
+
+        #endif
+        '''
+
+        # Meter helpers después de los includes.
+        include_matches = list(re.finditer(r'^\s*#include[^\n]*$', source, flags=re.MULTILINE))
+        if not include_matches:
+            raise SystemExit(f"No encontré includes en {target}")
+
+        insert_at = include_matches[-1].end()
+        source = source[:insert_at] + "\n" + helper + source[insert_at:]
+
+        # Buscar la función real del toggler alrededor del mensaje/ruta de flashlight.
+        search_pos = -1
+        for marker in ["flashlight_file_not_found", "Flashlight file not found", "TW_FLASHLIGHT_PATH"]:
+            search_pos = source.find(marker)
+            if search_pos != -1:
+                break
+
+        if search_pos == -1:
+            print(f"Archivo candidato: {target}")
+            print("No pude ubicar la función exacta del toggler.")
+            raise SystemExit(1)
+
+        func_regex = re.compile(
+            r'((?:int|bool|void)\s+[A-Za-z_][A-Za-z0-9_:~]*\s*\([^;{}]*\)\s*)\{',
+            re.MULTILINE | re.DOTALL,
+        )
+
+        matches = [m for m in func_regex.finditer(source) if m.start() < search_pos]
+
+        if not matches:
+            raise SystemExit("No pude encontrar la firma de la función del toggler.")
+
+        match = matches[-1]
+        func_start = match.start()
+        brace_pos = source.find("{", match.start())
+
+        depth = 0
+        func_end = None
+
+        for i in range(brace_pos, len(source)):
+            if source[i] == "{":
+                depth += 1
+            elif source[i] == "}":
+                depth -= 1
+                if depth == 0:
+                    func_end = i + 1
+                    break
+
+        if func_end is None:
+            raise SystemExit("No pude encontrar el final de la función del toggler.")
+
+        signature = match.group(1).rstrip()
+
+        new_func = f'''{signature}
+        {{
+            int ret = fogorow_flashlight_toggle();
+
+            if (ret < 0) {{
+                gui_msg(Msg(msg::kError, "flashlight_file_not_found=Flashlight file not found!"));
+            }}
+
+            return 0;
+        }}'''
+
+        old_func = source[func_start:func_end]
+        source = source[:func_start] + new_func + source[func_end:]
+
+        target.write_text(source, encoding="utf-8")
+
+        print("Parche de flashlight aplicado correctamente")
+        print(f"Archivo parcheado: {target}")
+        print(f"Path usado: {flash_path}")
+        print("Función reemplazada:")
+        print(old_func[:1200])
+        PY
+
+        echo "=== Referencias flashlight después del parche ==="
+        grep -RInE "FOGOROW_FLASHLIGHT_STROBE_PATCH|fogorow_flashlight_toggle|flashlight_strobe|Flashlight file not found" bootable/recovery | head -80
+
     - name: Building OrangeFox
       shell: bash
       run: |
