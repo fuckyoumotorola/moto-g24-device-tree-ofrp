@@ -13,8 +13,7 @@ vendor /vendor ext4 ro wait,slotselect,avb,logical,first_stage_mount
 
 /dev/block/by-name/metadata /metadata ext4 rw,noatime,nosuid,nodev,discard wait,check,formattable
 
-/dev/block/by-name/userdata /data f2fs rw,noatime,nosuid,nodev,discard,fsync_mode=nobarrier,inlinecrypt wait,check,formattable,quota,latemount,resize,fileencryption=aes-256-xts:aes-256-cts:v2,metadata_encryption=aes-256-xts,keydirectory=/metadata/vold/metadata_encryption
-
+/dev/block/by-name/userdata /data f2fs rw,noatime,nosuid,nodev,discard,fsync_mode=nobarrier,inlinecrypt wait,check,formattable,quota,latemount,fileencryption=aes-256-xts:aes-256-cts:v2,metadata_encryption=aes-256-xts,keydirectory=/metadata/vold/metadata_encryption
 
 /devices/platform/11240000.mmc* auto auto defaults voldmanaged=sdcard1:auto
 
@@ -71,7 +70,7 @@ vendor /vendor ext4 ro wait,slotselect,avb,logical,first_stage_mount
 /dev/block/by-name/gz1 /gz1 emmc defaults defaults
 /dev/block/by-name/gz2 /gz2 emmc defaults defaults
 
-/dev/block/by-name/spmfw /spmfw defaults defaults
+/dev/block/by-name/spmfw /spmfw emmc defaults defaults
 
 
 
