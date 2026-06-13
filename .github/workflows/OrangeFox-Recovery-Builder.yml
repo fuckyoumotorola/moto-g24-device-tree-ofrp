@@ -2,11 +2,6 @@ name: OrangeFox - Build
 
 on:
   workflow_dispatch:
-    inputs:
-      ANDROID_VERSION:
-        description: 'Android Version'
-        required: true
-        default: '15'
 
 jobs:
   build:
@@ -26,6 +21,21 @@ jobs:
       contents: write
 
     steps:
+    - name: Detect Android version from branch
+      shell: bash
+      run: |
+        BRANCH="${GITHUB_REF_NAME}"
+
+        if [[ ! "$BRANCH" =~ ^android-[0-9]+$ ]]; then
+          echo "::error::Branch name must be like android-14 or android-15. Current: $BRANCH"
+          exit 1
+        fi
+
+        ANDROID_VERSION="${BRANCH#android-}"
+
+        echo "ANDROID_VERSION=${ANDROID_VERSION}" >> "$GITHUB_ENV"
+        echo "Detected Android version: ${ANDROID_VERSION}"
+
     - name: Check runner specs
       run: |
         echo "Runner name: $RUNNER_NAME"
@@ -664,10 +674,10 @@ jobs:
         files: |
           ${{ env.FILE_PATH }}/${{ env.RECOVERY_TYPE }}.img
           ${{ env.FILE_PATH }}/recovery-installer.zip
-        name: Unofficial OrangeFox for ${{ env.DEVICE_NAME }} Android ${{ github.event.inputs.ANDROID_VERSION }} // ${{ env.BUILD_DATE }}
+        name: Unofficial OrangeFox for ${{ env.DEVICE_NAME }} Android ${{ env.ANDROID_VERSION }} // ${{ env.BUILD_DATE }}
         tag_name: ${{ github.run_id }}
         body: |
-          Android: ${{ github.event.inputs.ANDROID_VERSION }}
+          Android: ${{ env.ANDROID_VERSION }}
           Build: ${{ env.MANIFEST_BRANCH }}
           Device: [Device Tree/Branch](${{ env.DEVICE_TREE_URL }}/tree/${{ env.DEVICE_TREE_BRANCH }})
           Commit: Most recent [commit](${{ env.DEVICE_TREE_URL }}/commit/${{ env.COMMIT_ID }}) during building.
