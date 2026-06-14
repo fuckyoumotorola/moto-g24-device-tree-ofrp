@@ -1,10 +1,10 @@
 # mount point       fstype    device                                                                flags
 
 # Super Partitions
-/system_a           ext4       /dev/block/mapper/system_a                                 flags=backup=1;flashimg=1;slotselect;display="System Image A"
-/vendor_a           ext4       /dev/block/mapper/vendor_a                                 flags=backup=1;flashimg=1;slotselect;display="Vendor Image A"
-/product_a          bind       /system/product                                            flags=display="Product Image A"
-/system_ext_a       ext4       /dev/block/mapper/system_ext_a                             flags=backup=1;flashimg=1;slotselect;display="System_EXT Image A"
+/system_a           ext4       /dev/block/mapper/system_a                                 flags=backup=1;flashimg=1;slotselect;display="System Image A";automount
+/vendor_a           ext4       /dev/block/mapper/vendor_a                                 flags=backup=1;flashimg=1;slotselect;display="Vendor Image A";automount
+/product_a          bind       /system/product                                            flags=display="Product Image A";automount
+/system_ext_a       ext4       /dev/block/mapper/system_ext_a                             flags=backup=1;flashimg=1;slotselect;display="System_EXT Image A";automount
 
 # Boot
 /boot               emmc      /dev/block/by-name/boot                                     flags=display="Boot";flashimg=1;backup=1;slotselect
@@ -12,10 +12,10 @@
 /vbmeta             emmc      /dev/block/by-name/vbmeta                                   flags=slotselect;display="VBMeta";flashimg=1;backup=1;slotselect
 
 ## Sensitive data (IMEI, MAC, ...)
-/protect_f          ext4      /dev/block/by-name/protect1                                 flags=display="Protect_f";backup=1;slotselect
-/protect_s          ext4      /dev/block/by-name/protect2                                 flags=display="Protect_s";backup=1;slotselect
+/protect_f          ext4      /dev/block/by-name/protect1                                 flags=display="Protect_f";backup=1;slotselect;automount
+/protect_s          ext4      /dev/block/by-name/protect2                                 flags=display="Protect_s";backup=1;slotselect;automount
 /nvram              emmc      /dev/block/by-name/nvram                                    flags=display="Nvram";backup=1;slotselect
-/nvdata             ext4      /dev/block/by-name/nvdata                                   flags=display="Nvdata";backup=1;slotselect
+/nvdata             ext4      /dev/block/by-name/nvdata                                   flags=display="Nvdata";backup=1;slotselect;automount
 
 ## Firmware
 /dtbo               emmc      /dev/block/by-name/dtbo	                                    flags=display="Dtbo";backup=1;flashimg=1;slotselect
@@ -27,5 +27,5 @@
 /otp                emmc      /dev/block/by-name/otp
 
 ## Removable storage
-/external_sd        vfat      /dev/block/mmcblk1p1                 /dev/block/mmcblk1     flags=display="MicroSD";storage;wipeingui;removable
+/external_sd        vfat      /dev/block/mmcblk1p1                 /dev/block/mmcblk1     flags=display="MicroSD";storage;wipeingui;removable;automount
 /usbstorage         vfat      /dev/block/sda1                      /dev/block/sda         flags=fsflags=utf8;display="USB Storage";storage;wipeingui;removable
