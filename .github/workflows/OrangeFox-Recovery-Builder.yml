@@ -711,6 +711,6 @@ jobs:
         body: |
           Android: ${{ env.ANDROID_VERSION }}
           Build: ${{ env.MANIFEST_BRANCH }}
+          Build fingerprint: ${{ github.event.inputs.BUILD_FINGERPRINT }}
           Device: [Device Tree/Branch](${{ env.DEVICE_TREE_URL }}/tree/${{ env.DEVICE_TREE_BRANCH }})
-          Commit: Most recent [commit](${{ env.DEVICE_TREE_URL }}/commit/${{ env.COMMIT_ID }}) during building.
           MD5 (img): ${{ env.MD5_IMG }}
