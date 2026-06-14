@@ -3,6 +3,16 @@ name: OrangeFox - Build
 on:
   workflow_dispatch:
     inputs:
+      ANDROID_VERSION:
+        description: "Android version"
+        required: true
+        default: "15"
+        type: choice
+        options:
+          - "14"
+          - "15"
+          - "16"
+
       BUILD_FINGERPRINT:
         description: "Build fingerprint"
         required: true
@@ -26,21 +36,6 @@ jobs:
       contents: write
 
     steps:
-    - name: Detect Android version from branch
-      shell: bash
-      run: |
-        BRANCH="${GITHUB_REF_NAME}"
-
-        if [[ ! "$BRANCH" =~ ^android-[0-9]+$ ]]; then
-          echo "::error::Branch name must be like android-14 or android-15. Current: $BRANCH"
-          exit 1
-        fi
-
-        ANDROID_VERSION="${BRANCH#android-}"
-
-        echo "ANDROID_VERSION=${ANDROID_VERSION}" >> "$GITHUB_ENV"
-        echo "Detected Android version: ${ANDROID_VERSION}"
-
     - name: Check runner specs
       run: |
         echo "Runner name: $RUNNER_NAME"
@@ -146,6 +141,33 @@ jobs:
         echo "COMMIT_ID=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
         echo "DEVICE_TREE_URL=https://github.com/${{ github.repository }}" >> "$GITHUB_ENV"
         echo "DEVICE_TREE_BRANCH=${{ github.ref_name }}" >> "$GITHUB_ENV"
+
+    - name: Fill PLATFORM_VERSION in BoardConfig.mk
+      shell: bash
+      env:
+        ANDROID_VERSION: ${{ github.event.inputs.ANDROID_VERSION }}
+      run: |
+        set -e
+
+        cd "${GITHUB_WORKSPACE}/OrangeFox/fox_${{ env.MANIFEST_BRANCH }}"
+
+        BOARD_CONFIG="${{ env.DEVICE_PATH }}/BoardConfig.mk"
+
+        if [ ! -f "$BOARD_CONFIG" ]; then
+          echo "::error::BoardConfig.mk not found: $BOARD_CONFIG"
+          exit 1
+        fi
+
+        sed -i "s/^PLATFORM_VERSION[[:space:]]*:=.*/PLATFORM_VERSION := ${ANDROID_VERSION}/" "$BOARD_CONFIG"
+
+        if ! grep -q "^PLATFORM_VERSION := ${ANDROID_VERSION}$" "$BOARD_CONFIG"; then
+          echo "::error::Failed to set PLATFORM_VERSION"
+          grep -n "PLATFORM_VERSION" "$BOARD_CONFIG" || true
+          exit 1
+        fi
+
+        echo "=== PLATFORM_VERSION ==="
+        grep -n "^PLATFORM_VERSION" "$BOARD_CONFIG"
 
     - name: Fill fingerprint props in system.prop
       shell: bash
@@ -706,10 +728,10 @@ jobs:
         files: |
           ${{ env.FILE_PATH }}/${{ env.RECOVERY_TYPE }}.img
           ${{ env.FILE_PATH }}/recovery-installer.zip
-        name: Unofficial OrangeFox for ${{ env.DEVICE_NAME }} Android ${{ env.ANDROID_VERSION }} // ${{ env.BUILD_DATE }}
+        name: Unofficial OrangeFox for ${{ env.DEVICE_NAME }} Android ${{ github.event.inputs.ANDROID_VERSION }} // ${{ env.BUILD_DATE }}
         tag_name: ${{ github.run_id }}
         body: |
-          Android: ${{ env.ANDROID_VERSION }}
+          Android: ${{ github.event.inputs.ANDROID_VERSION }}
           Build: ${{ env.MANIFEST_BRANCH }}
           Build fingerprint: ${{ github.event.inputs.BUILD_FINGERPRINT }}
           Device: [Device Tree/Branch](${{ env.DEVICE_TREE_URL }}/tree/${{ env.DEVICE_TREE_BRANCH }})
