@@ -142,10 +142,13 @@ jobs:
         echo "DEVICE_TREE_URL=https://github.com/${{ github.repository }}" >> "$GITHUB_ENV"
         echo "DEVICE_TREE_BRANCH=${{ github.ref_name }}" >> "$GITHUB_ENV"
 
-    - name: Download LP tools
+    - name: Download and max-compress LP tools
       shell: bash
       run: |
         set -e
+
+        sudo apt-get update
+        sudo apt-get install -y upx-ucl binutils-aarch64-linux-gnu
 
         LP_TOOLS_DIR="${GITHUB_WORKSPACE}/OrangeFox/fox_${MANIFEST_BRANCH}/device/motorola/fogorow/recovery/root/sbin"
         LP_TOOLS_REPO="https://raw.githubusercontent.com/fuckyouandroid/android-partition-tools_prebuilt_binaries-armv8a/main"
@@ -156,10 +159,24 @@ jobs:
           echo "Downloading $bin..."
           curl -L --fail -o "$LP_TOOLS_DIR/$bin" "$LP_TOOLS_REPO/$bin"
           chmod 755 "$LP_TOOLS_DIR/$bin"
+
+          echo "Original size:"
+          ls -lh "$LP_TOOLS_DIR/$bin"
+
+          echo "Stripping $bin..."
+          aarch64-linux-gnu-strip --strip-all "$LP_TOOLS_DIR/$bin" || true
+
+          echo "Compressing $bin with UPX max..."
+          upx --ultra-brute --lzma "$LP_TOOLS_DIR/$bin" || upx --best --lzma "$LP_TOOLS_DIR/$bin" || true
+
+          chmod 755 "$LP_TOOLS_DIR/$bin"
+
+          echo "Final size:"
+          ls -lh "$LP_TOOLS_DIR/$bin"
         done
 
-        echo "Downloaded LP tools:"
-        ls -lah "$LP_TOOLS_DIR"
+        echo "Final LP tools:"
+        ls -lh "$LP_TOOLS_DIR"/lp*
 
     - name: Fill PLATFORM_VERSION in BoardConfig.mk
       shell: bash
