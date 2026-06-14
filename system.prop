@@ -21,5 +21,5 @@ keymaster_ver=4.1
 ro.vendor.mtk_keymaster_support=1
 
 # Fingerprint / Build
-ro.build.fingerprint=motorola/fogorow_gp/fogorow:14/UTAS34.82-106-3/82-106-3:user/release-keys
-ro.vendor.build.fingerprint=motorola/fogorow_gp/fogorow:14/UTAS34.82-106-3/82-106-3:user/release-keys
+ro.build.fingerprint=
+ro.vendor.build.fingerprint=
