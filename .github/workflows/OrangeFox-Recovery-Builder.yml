@@ -74,14 +74,14 @@ jobs:
         restore-keys: |
           orangefox-${{ env.MANIFEST_BRANCH }}-${{ env.DEVICE_NAME }}
           orangefox-${{ env.MANIFEST_BRANCH }}
-        max-size: 5G
+        max-size: 3G
         append-timestamp: true
         verbose: 1
 
     - name: Swap Space
       uses: pierotofy/set-swap-space@master
       with:
-        swap-size-gb: 24
+        swap-size-gb: 8
 
     - name: Build Environment
       run: |
@@ -96,9 +96,7 @@ jobs:
       with:
         path: |
           ${{ github.workspace }}/OrangeFox/fox_${{ env.MANIFEST_BRANCH }}/.repo
-        key: orangefox-source-${{ runner.os }}-${{ env.MANIFEST_BRANCH }}-${{ github.run_id }}
-        restore-keys: |
-          orangefox-source-${{ runner.os }}-${{ env.MANIFEST_BRANCH }}-
+        key: orangefox-source-${{ runner.os }}-${{ env.MANIFEST_BRANCH }}
 
     - name: Set-up Manifest
       shell: bash
