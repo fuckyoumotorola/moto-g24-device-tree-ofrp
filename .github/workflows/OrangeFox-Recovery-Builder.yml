@@ -688,12 +688,12 @@ jobs:
             mkdir("/product_a", 0755);
 
             struct stat st;
-            if (stat("/system_a/product_a", &st) != 0 || !S_ISDIR(st.st_mode))
+            if (stat("/system_a/product", &st) != 0 || !S_ISDIR(st.st_mode))
                 return false;
 
             umount("/product_a");
 
-            return mount("/system_a/product_a", "/product_a", nullptr, MS_BIND, nullptr) == 0;
+            return mount("/system_a/product", "/product_a", nullptr, MS_BIND, nullptr) == 0;
         }
 
         #endif
