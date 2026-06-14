@@ -74,7 +74,7 @@ jobs:
         restore-keys: |
           orangefox-${{ env.MANIFEST_BRANCH }}-${{ env.DEVICE_NAME }}
           orangefox-${{ env.MANIFEST_BRANCH }}
-        max-size: 3G
+        max-size: 10G
         append-timestamp: true
         verbose: 1
 
