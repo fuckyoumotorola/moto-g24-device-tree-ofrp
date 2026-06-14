@@ -142,6 +142,25 @@ jobs:
         echo "DEVICE_TREE_URL=https://github.com/${{ github.repository }}" >> "$GITHUB_ENV"
         echo "DEVICE_TREE_BRANCH=${{ github.ref_name }}" >> "$GITHUB_ENV"
 
+    - name: Download LP tools
+      shell: bash
+      run: |
+        set -e
+
+        LP_TOOLS_DIR="${GITHUB_WORKSPACE}/OrangeFox/fox_${MANIFEST_BRANCH}/device/motorola/fogorow/recovery/root/sbin"
+        LP_TOOLS_REPO="https://raw.githubusercontent.com/fuckyouandroid/android-partition-tools_prebuilt_binaries-armv8a/main"
+
+        mkdir -p "$LP_TOOLS_DIR"
+
+        for bin in lpadd lpdump lpflash lpmake lpunpack; do
+          echo "Downloading $bin..."
+          curl -L --fail -o "$LP_TOOLS_DIR/$bin" "$LP_TOOLS_REPO/$bin"
+          chmod 755 "$LP_TOOLS_DIR/$bin"
+        done
+
+        echo "Downloaded LP tools:"
+        ls -lah "$LP_TOOLS_DIR"
+
     - name: Fill PLATFORM_VERSION in BoardConfig.mk
       shell: bash
       env:
