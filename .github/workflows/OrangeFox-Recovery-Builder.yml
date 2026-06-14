@@ -2,6 +2,11 @@ name: OrangeFox - Build
 
 on:
   workflow_dispatch:
+    inputs:
+      BUILD_FINGERPRINT:
+        description: "Build fingerprint"
+        required: true
+        type: string
 
 jobs:
   build:
@@ -141,6 +146,33 @@ jobs:
         echo "COMMIT_ID=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
         echo "DEVICE_TREE_URL=https://github.com/${{ github.repository }}" >> "$GITHUB_ENV"
         echo "DEVICE_TREE_BRANCH=${{ github.ref_name }}" >> "$GITHUB_ENV"
+
+    - name: Fill fingerprint props in system.prop
+      shell: bash
+      env:
+        BUILD_FINGERPRINT: ${{ github.event.inputs.BUILD_FINGERPRINT }}
+      run: |
+        set -e
+
+        cd "${GITHUB_WORKSPACE}/OrangeFox/fox_${{ env.MANIFEST_BRANCH }}"
+
+        PROP_FILE="${{ env.DEVICE_PATH }}/system.prop"
+
+        mkdir -p "$(dirname "$PROP_FILE")"
+        touch "$PROP_FILE"
+
+        sed -i '/^ro\.build\.fingerprint=/d' "$PROP_FILE"
+        sed -i '/^ro\.vendor\.build\.fingerprint=/d' "$PROP_FILE"
+
+        {
+          echo ""
+          echo "# Fingerprint / Build"
+          echo "ro.build.fingerprint=${BUILD_FINGERPRINT}"
+          echo "ro.vendor.build.fingerprint=${BUILD_FINGERPRINT}"
+        } >> "$PROP_FILE"
+
+        echo "=== Final system.prop ==="
+        cat "$PROP_FILE"
 
     - name: Patch vibrator
       shell: bash
