@@ -745,6 +745,66 @@ jobs:
         grep -Rsn "FOGOROW_PRODUCT_A_BIND_MOUNT" bootable/recovery || true
         grep -Rsn "fogorow_bind_product_a" bootable/recovery || true
 
+    - name: Patch decrypted data unmount bug
+      shell: bash
+      run: |
+        set -e
+
+        cd "${GITHUB_WORKSPACE}/OrangeFox/fox_${MANIFEST_BRANCH}"
+
+        python3 - <<'PY'
+        from pathlib import Path
+        import textwrap
+
+        MARKER = "FOGOROW_BLOCK_DECRYPTED_DATA_UNMOUNT"
+
+        path = Path("bootable/recovery/partitionmanager.cpp")
+        if not path.exists():
+            raise SystemExit("partitionmanager.cpp not found")
+
+        text = path.read_text()
+
+        if MARKER in text:
+            print("Patch already applied")
+            raise SystemExit(0)
+
+        start = text.find("int TWPartitionManager::UnMount_By_Path")
+        end = text.find("int TWPartitionManager::Is_Mounted_By_Path", start)
+
+        if start == -1 or end == -1:
+            raise SystemExit("Could not find UnMount_By_Path block")
+
+        block = text[start:end]
+
+        needle = "string Local_Path = TWFunc::Get_Root_Path(Path);"
+
+        inject = textwrap.dedent(r'''
+        string Local_Path = TWFunc::Get_Root_Path(Path);
+
+        #ifdef TW_INCLUDE_FBE
+        	// FOGOROW_BLOCK_DECRYPTED_DATA_UNMOUNT
+        	// On FBE devices, unmounting /data drops installed fscrypt keys.
+        	// TWRP/OrangeFox may later remount /data without re-running user CE unlock,
+        	// causing /data/media/0 to appear encrypted again.
+        	if (Local_Path == "/data" &&
+        			DataManager::GetIntValue(TW_IS_FBE) &&
+        			DataManager::GetIntValue("tw_all_users_decrypted") == 1) {
+        		LOGINFO("FOGOROW: refusing to unmount decrypted /data to preserve fscrypt keys\n");
+        		return true;
+        	}
+        #endif
+        ''').strip()
+
+        if needle not in block:
+            raise SystemExit("Could not find Local_Path line inside UnMount_By_Path")
+
+        block = block.replace(needle, inject, 1)
+        text = text[:start] + block + text[end:]
+
+        path.write_text(text)
+        print("Patched partitionmanager.cpp")
+        PY
+
     - name: Building OrangeFox
       shell: bash
       run: |
