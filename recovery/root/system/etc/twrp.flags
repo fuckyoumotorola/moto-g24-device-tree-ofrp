@@ -22,7 +22,8 @@
 /logo	              emmc      /dev/block/by-name/logo	                                    flags=display="Logo";backup=1;flashimg=1;slotselect
 /expdb              emmc      /dev/block/by-name/expdb
 #/seccfg            emmc      /dev/block/by-name/seccfg
-/tee                emmc      /dev/block/by-name/tee                                      flags=slotselect;
+/tee1               emmc      /dev/block/by-name/tee1                                     flags=display="TEE1";backup=1
+/tee2               emmc      /dev/block/by-name/tee2                                     flags=display="TEE2";backup=1
 /spmfw              emmc      /dev/block/by-name/spmfw                                    flags=slotselect;
 /otp                emmc      /dev/block/by-name/otp
 
