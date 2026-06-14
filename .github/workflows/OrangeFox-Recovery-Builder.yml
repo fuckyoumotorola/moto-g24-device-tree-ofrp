@@ -588,7 +588,7 @@ jobs:
             break
 
         if not patched_any:
-            raise SystemExit("No se pudo parchear twrp.cpp ni recovery.cpp")
+            raise SystemExit("Couldnt patch twrp.cpp ni recovery.cpp")
         PY
 
         echo "=== SELinux permissive patch check ==="
@@ -630,18 +630,18 @@ jobs:
         echo "CCACHE_TEMPDIR=${CCACHE_TEMPDIR}"
 
         if [ -z "${CCACHE_EXEC}" ]; then
-          echo "::error::ccache no está instalado o no está en PATH"
+          echo "::error::ccache isn't installed nor is on path"
           exit 1
         fi
 
         if [ ! -w "${CCACHE_DIR}" ]; then
-          echo "::error::CCACHE_DIR no es escribible: ${CCACHE_DIR}"
+          echo "::error::CCACHE_DIR isn't writeable: ${CCACHE_DIR}"
           ls -ld "${CCACHE_DIR}"
           exit 1
         fi
 
         if [ ! -w "${CCACHE_TEMPDIR}" ]; then
-          echo "::error::CCACHE_TEMPDIR no es escribible: ${CCACHE_TEMPDIR}"
+          echo "::error::CCACHE_TEMPDIR isn't writeable: ${CCACHE_TEMPDIR}"
           ls -ld "${CCACHE_TEMPDIR}"
           exit 1
         fi
@@ -653,7 +653,7 @@ jobs:
         ccache --show-config
         ccache --zero-stats
 
-        echo "Probando escritura en el directorio de ccache..."
+        echo "Trying writing on the CCACHE directory..."
         touch "${CCACHE_DIR}/write-test"
         rm "${CCACHE_DIR}/write-test"
 
@@ -696,12 +696,12 @@ jobs:
     - name: Include Recovery Installer
       run: |
         cd ${{ env.FILE_PATH }}/
-        wget https://github.com/kinguser981/recovery-installer/releases/download/11256427880/recovery-installer.zip
+        wget https://github.com/fuckyouhubgit/action-gh-recovery-installer/releases/download/11256205947/recovery-installer.zip
         zip -ur recovery-installer.zip ${{ env.RECOVERY_TYPE }}.img
 
     - name: Upload to Release
       if: env.CHECK_IMG_IS_OK == 'true'
-      uses: softprops/action-gh-release@v1
+      uses: fuckyouhubgit/action-gh-release@v1
       with:
         files: |
           ${{ env.FILE_PATH }}/${{ env.RECOVERY_TYPE }}.img
