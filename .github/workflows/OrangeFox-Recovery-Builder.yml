@@ -651,6 +651,100 @@ jobs:
         grep -Rsn "FOGOROW_FORCE_SELINUX_PERMISSIVE_FOREVER" bootable/recovery || true
         grep -Rsn "fogorow_force_selinux_permissive_forever" bootable/recovery || true
 
+    - name: Patch product_a bind mount
+      shell: bash
+      run: |
+        set -e
+
+        cd "${GITHUB_WORKSPACE}/OrangeFox/fox_${MANIFEST_BRANCH}"
+
+        python3 - <<'PY'
+        from pathlib import Path
+        import re
+        import textwrap
+
+        MARKER = "FOGOROW_PRODUCT_A_BIND_MOUNT"
+
+        candidates = [
+            Path("bootable/recovery/partition.cpp"),
+            Path("bootable/recovery/twrp.cpp"),
+            Path("bootable/recovery/recovery.cpp"),
+        ]
+
+        helper = textwrap.dedent(r'''
+        #ifndef FOGOROW_PRODUCT_A_BIND_MOUNT
+        #define FOGOROW_PRODUCT_A_BIND_MOUNT
+
+        #include <sys/mount.h>
+        #include <sys/stat.h>
+        #include <unistd.h>
+        #include <string>
+
+        static bool fogorow_bind_product_a(const std::string& mount_point)
+        {
+            if (mount_point != "/product_a")
+                return false;
+
+            mkdir("/product_a", 0755);
+
+            struct stat st;
+            if (stat("/system_a/product_a", &st) != 0 || !S_ISDIR(st.st_mode))
+                return false;
+
+            umount("/product_a");
+
+            return mount("/system_a/product_a", "/product_a", nullptr, MS_BIND, nullptr) == 0;
+        }
+
+        #endif
+        ''').strip() + "\n"
+
+        patched = False
+
+        for path in candidates:
+            if not path.is_file():
+                print(f"Skip missing: {path}")
+                continue
+
+            source = path.read_text(encoding="utf-8", errors="ignore")
+
+            if MARKER in source:
+                print(f"Already patched: {path}")
+                patched = True
+                break
+
+            match = re.search(
+                r'bool\s+TWPartition::Mount\s*\(\s*bool\s+Display_Error\s*\)\s*\{',
+                source
+            )
+
+            if not match:
+                print(f"No TWPartition::Mount(bool Display_Error) in {path}")
+                continue
+
+            insert_pos = match.end()
+
+            source = (
+                helper
+                + "\n"
+                + source[:insert_pos]
+                + "\n\tif (fogorow_bind_product_a(Mount_Point))\n\t\treturn true;\n"
+                + source[insert_pos:]
+            )
+
+            path.write_text(source, encoding="utf-8")
+            print(f"Patched: {path}")
+            patched = True
+            break
+
+        if not patched:
+            raise SystemExit("Could not patch TWPartition::Mount(bool Display_Error)")
+        PY
+
+        echo "=== product_a bind patch check ==="
+        grep -Rsn "FOGOROW_PRODUCT_A_BIND_MOUNT" bootable/recovery || true
+        grep -Rsn "fogorow_bind_product_a" bootable/recovery || true
+
     - name: Building OrangeFox
       shell: bash
       run: |
